@@ -1,12 +1,23 @@
 package com.example.demo.api;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
+
+import org.springframework.util.StringUtils;
+
+import com.example.demo.DemoApplication;
 import com.example.demo.entity.Qiniu;
 import com.example.demo.queue.LinkQueue;
+import com.example.demo.utils.FileUtils;
 import com.qiniu.common.QiniuException;
 import com.qiniu.http.Response;
 import com.qiniu.storage.BucketManager;
 import com.qiniu.storage.model.BatchStatus;
 import com.qiniu.storage.model.FileInfo;
+import com.qiniu.util.Auth;
 
 /**
  * 七牛工具类
@@ -31,14 +42,16 @@ public class QUtils {
 		String delimiter = "";
 		//列举空间文件列表
 		BucketManager.FileListIterator fileListIterator = bucketManager.createFileListIterator(bucket, prefix, limit, delimiter);
+		System.out.println("正在搜索数据");
 		while (fileListIterator.hasNext()) {
 		    //处理获取的file list结果
 		    FileInfo[] items = fileListIterator.next();
 		    for (FileInfo item : items) {
 		    	queue.enQueue(item.key);
-//		    	System.out.println(item.key + "加入队列  执行线程：" + Thread.currentThread().getName());
+		    	System.out.println(item.key + "加入队列  执行线程：" + Thread.currentThread().getName());
 		    }
 		}
+		System.out.println("文件列表拉取完毕，如果什么都没有，那就是没找到文件");
 	}
 	
 	
@@ -68,6 +81,50 @@ public class QUtils {
 		} catch (QiniuException ex) {
 		    System.err.println(ex.response.toString());
 		}
+	}
+	
+	/**
+	 * 下载公用空间图片
+	 * @param qiniu
+	 * @param bucket
+	 * @param keys
+	 */
+	public static void downloadOpenSource(Qiniu qiniu,String domainOfBucket,String... keys) {
+		for (int i = 0; i < keys.length; i++) {
+			String fileName = keys[i];
+			String finalUrl = String.format("%s/%s", domainOfBucket, fileName);
+			System.out.println(finalUrl);
+			String filePath= DemoApplication.props.getProperty("qiniu.filepath");
+			FileUtils.downloadPicture(finalUrl, filePath+File.separator+fileName);
+	    }
+		
+	}
+	
+	/**
+	 * 下载私有空间图片
+	 * @param qiniu
+	 * @param bucket
+	 * @param keys
+	 */
+	public static void downloadPrivateSource(Qiniu qiniu,String domainOfBucket,String... keys) {
+		for (int i = 0; i < keys.length; i++) {
+			String fileName = keys[i];
+			String encodedFileName;
+			try {
+				encodedFileName = URLEncoder.encode(fileName, "utf-8");
+			} catch (UnsupportedEncodingException e) {
+				System.out.println(fileName + "转码失败");
+				continue;
+			}
+			String publicUrl = String.format("%s/%s", domainOfBucket, encodedFileName);
+			Auth auth = qiniu.getAuth();
+			long expireInSeconds = 3600;//1小时，可以自定义链接过期时间
+			String finalUrl = auth.privateDownloadUrl(publicUrl, expireInSeconds);
+			System.out.println(finalUrl);
+			String filePath= DemoApplication.props.getProperty("qiniu.filepath");
+			FileUtils.downloadPicture(finalUrl, filePath+File.separator+fileName);
+	    }
+		
 	}
 	
 }

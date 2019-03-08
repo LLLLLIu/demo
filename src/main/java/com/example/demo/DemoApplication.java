@@ -27,8 +27,8 @@ public class DemoApplication {
 	public static void main(String[] args) throws InterruptedException {
 		SpringApplication.run(DemoApplication.class, args);
 		Qiniu qiniu = new Qiniu(DemoApplication.props.getProperty("qiniu.ak"), DemoApplication.props.getProperty("qiniu.sk"));
-		String bucket = "images";//空间名称
-		String prefix = "upload/vod/";
+		String bucket = DemoApplication.props.getProperty("qiniu.bucket");//空间名称
+		String prefix = DemoApplication.props.getProperty("qiniu.prefix");
 		// 查询文件列表
 		
 		AddTask addTask = new AddTask(qiniu, bucket, prefix);

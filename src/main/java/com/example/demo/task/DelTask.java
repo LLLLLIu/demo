@@ -40,9 +40,23 @@ public class DelTask extends Thread {
 				do {
 					list1000.add(QUtils.queue.deQueue());
 				}while(list1000.size() < 1000 && QUtils.queue.size() > 0);
-				String[] array = new String[1000];
+				String[] array = new String[list1000.size()];
+				Integer operational = Integer.valueOf(DemoApplication.props.getProperty("qiniu.operational"));
 				if(list1000.size() <= 1000) {
-					QUtils.batchDelFile(qiniu, bucket, list1000.toArray(array));
+					if(operational == 0) {//删除
+						QUtils.batchDelFile(qiniu, bucket, list1000.toArray(array));
+					}else if(operational == 1){// 下载
+						String domainOfBucket = DemoApplication.props.getProperty("qiniu.domainOfBucket");
+						Integer download = Integer.valueOf(DemoApplication.props.getProperty("qiniu.download"));
+						if(download == 1) {// 私有空间
+							QUtils.downloadPrivateSource(qiniu, domainOfBucket, list1000.toArray(array));
+						}else { // 公用空间
+							QUtils.downloadOpenSource(qiniu, domainOfBucket , list1000.toArray(array));
+						}
+					}else {
+						// 没有这个操作
+						flag = false;
+					}
 				}
 			}else {
 				flag = false;
